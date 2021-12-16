@@ -17,25 +17,101 @@ limitations under the License.
 package v1
 
 import (
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// CronJobSpec defines the desired state of CronJob
-type CronJobSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+// ConcurrencyPolicy describes how the job will be handled.
+// Only one of the following concurrent policies may be specified.
+// If none of the following policies is specified, the default one
+// is AllowConcurrent.
+//+kubebuilder:validation:Enum=Allow;Forbid;Replace
+type ConcurrencyPolicy string
 
-	// Foo is an example field of CronJob. Edit cronjob_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+// Definir un tipo de datos en lugar de usar "string" directamente permite 
+// mejorar la "documentacion" y ademas poder poner una validacion en el tipo
+// en lugar de tener que hacerlo luego en el codigo.
+
+
+const (
+	// AllowConcurrent allows CronJobs to run concurrently
+	AllowConcurrent ConcurrencyPolicy = "Allow"
+
+	// ForbidConcurrent forbids concurrent runs, skipping next run if previous
+	// has not finished yet
+	ForbidConcurrent ConcurrencyPolicy = "Forbid"
+
+	// ReplaceConcurrent cancels currently running job and replaces it with a new one.
+	ReplaceConcurrent ConcurrencyPolicy = "Replace"
+)
+
+
+// CronJobSpec defines the desired state of CronJob
+// so any needed input for the controller should go here
+type CronJobSpec struct {
+	//+kubebuilder:validation:MinLength=0
+
+	// The schedule in Cron format
+	Schedule string `json:"schedule"`
+
+	//+kubebuilder:validation:Minimum=0
+
+	// Optional deadline in seconds for starting the job if it misses scheduled
+	// time for any reason. Missed jobs executions will be counted as failed ones.
+	// +optional
+	StartingDeadlineSeconds *int64 `json:"startingDeadlineSeconds,omitempty"`
+
+	// Specifies how to treat concurrent executions of a Job.
+	// Valid values are:
+	// - "Allow" (default): allos CronJobs to run concurrently;
+	// - "Forbid": forbids concurrent runs, skipping next run if previous run hasn't finished yet;
+	// - "Replace": cancels concurently running job and replaces it with a new one
+	// +optional
+	ConcurrencyPolicy ConcurrencyPolicy `json:"concurrencyPolicy,omitempty"`
+
+	// This flag tells the controller to suspend subsequent executions, it does not
+	// apply to already started executions. Defaults to false.
+	// +optional
+	Suspend *bool `json:"suspend,omitempty"`
+
+	// Specifies the job that will be created when executing a CronJob
+	JobTemplate batchv1beta1.JobTemplateSpec `json:"jobTemplate"`
+
+	//+kubebuilder:validation:Minimum=0
+
+	// The number of successful finished jobs to retain.
+	// This is a pointer to distinguish between explicit zero and not specified.e
+	// +optional
+	SucessfulJobHistoryLimit *int32 `json:"successfulJobHistoryLimit,omitempty"`
+	
+
+	//+kubebuilder:validation:Minimum=0
+
+	// The number of failed finished jobs to retain.
+	// This is a pointer to distinguish between explicit zero and not speficied.
+	// +optional
+	FailedJobHistoryLimit *int32 `json:"failedJobHistoryLimit,omitempty"`	
 }
 
+
+
+
 // CronJobStatus defines the observed state of CronJob
+// It should contain any information we want users or 
+// other controllers to be able to easily obtain.
 type CronJobStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+
+	// A list of pointers to currently running jobs
+	// +optional
+	Active []corev1.ObjectReference `json:"active,omitempty"`
+
+	// Information when was the last time the job was successfully scheduled.
+	// +optional
+	LastScheduleTime *metav1.Time `json:"lastScheduleTime,omitempty"`
 }
 
 //+kubebuilder:object:root=true

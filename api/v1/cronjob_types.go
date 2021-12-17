@@ -32,10 +32,9 @@ import (
 //+kubebuilder:validation:Enum=Allow;Forbid;Replace
 type ConcurrencyPolicy string
 
-// Definir un tipo de datos en lugar de usar "string" directamente permite 
+// Definir un tipo de datos en lugar de usar "string" directamente permite
 // mejorar la "documentacion" y ademas poder poner una validacion en el tipo
 // en lugar de tener que hacerlo luego en el codigo.
-
 
 const (
 	// AllowConcurrent allows CronJobs to run concurrently
@@ -48,7 +47,6 @@ const (
 	// ReplaceConcurrent cancels currently running job and replaces it with a new one.
 	ReplaceConcurrent ConcurrencyPolicy = "Replace"
 )
-
 
 // CronJobSpec defines the desired state of CronJob
 // so any needed input for the controller should go here
@@ -87,21 +85,17 @@ type CronJobSpec struct {
 	// This is a pointer to distinguish between explicit zero and not specified.e
 	// +optional
 	SucessfulJobHistoryLimit *int32 `json:"successfulJobHistoryLimit,omitempty"`
-	
 
 	//+kubebuilder:validation:Minimum=0
 
 	// The number of failed finished jobs to retain.
 	// This is a pointer to distinguish between explicit zero and not speficied.
 	// +optional
-	FailedJobHistoryLimit *int32 `json:"failedJobHistoryLimit,omitempty"`	
+	FailedJobHistoryLimit *int32 `json:"failedJobHistoryLimit,omitempty"`
 }
 
-
-
-
 // CronJobStatus defines the observed state of CronJob
-// It should contain any information we want users or 
+// It should contain any information we want users or
 // other controllers to be able to easily obtain.
 type CronJobStatus struct {
 

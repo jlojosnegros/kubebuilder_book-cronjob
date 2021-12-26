@@ -3,4 +3,18 @@ kind: CronJob
 metadata:
   name: cronjob-sample
 spec:
-  # TODO(user): Add fields here
+  schedule: "*/1 * * * *"
+  startingDeadlineSeconds: 60
+  concurrencyPolicy: Allow # this is also default value if none spefify
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: hello
+              image: busybox
+              args:
+                - /bin/sh
+                - -c
+                - date; echo Hello from Kubernetes cluster
+              restartPolicy: OnFailure

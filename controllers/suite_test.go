@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -30,6 +31,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	batchv1 "tutorial.kubebuilder.io/cronjob/api/v1"
 	//+kubebuilder:scaffold:imports
 )
@@ -40,6 +42,8 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var ctx context.Context
+var cancel context.CancelFunc
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -51,6 +55,8 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+
+	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -70,6 +76,38 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	//jlom NOTE: tenemos dos API clients
+	// uno creado en las lineas de arriba
+	// otro creado a partir del manager debajo.
+	// Esto es asi porque cuando hacemos los asserts
+	// queremos hacerlos contra el estado "live" del cluster
+	// y el cliente del manager los haria contra el estado de
+	// la cache.
+	// sin embargo queremos que nuestro controller se comporte
+	// lo mas parecido posible a como lo haria en la realidad,
+	// es decir, que cuando haga la reconciliacion utilice un
+	// cliente que vaya contra la cache.
+	// Ademas tenemos algunas caracteristicas ( como los indices)
+	// que solo estan disponibles en la cache.
+
+	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&CronJobReconciler{
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	go func() {
+		defer GinkgoRecover()
+
+		err = k8sManager.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
 
 }, 60)
 
